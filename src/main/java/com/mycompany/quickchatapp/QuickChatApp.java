@@ -264,5 +264,14 @@ public static void readStoredMessages() {
 }
 
 }
+//References:
 
+/*
+OpenAI. (2025). ChatGPT (Version GPT-4), [Large language model]. Code assistance and generation for Java chat application including user registration, login, message handling, and JSON storage, accessed via ChatGPT on https://chat.openai.com on multiple dates in April 2025.
+
+*/
+/*
+Stleman, D. (2024). JSON-java: A reference implementation of a JSON package in Java. GitHub. Available at: https://github.com/stleman/json-java (Accessed: 16 April 2025).
+[The application stores messages using the org.json library for JSON formatting and file storage]
+*/
 
