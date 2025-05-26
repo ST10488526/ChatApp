@@ -3,87 +3,88 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/UnitTests/JUnit5TestClass.java to edit this template
  */
 package com.mycompany.quickchatapp;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class QuickChatAppTest {
 
     @Test
     public void testUsernameCorrectFormat() {
-        assertTrue(QuickChatApp.checkUserName("kyl_1"));
+        assertTrue(QuickChatApp.isValidUsername("kyl_1"));
     }
 
     @Test
     public void testUsernameIncorrectFormat() {
-        assertFalse(QuickChatApp.checkUserName("kyle!!!!!!!"));
+        assertFalse(QuickChatApp.isValidUsername("kyle!!!!!!!"));
     }
 
     @Test
     public void testPasswordMeetsRequirements() {
-        assertTrue(QuickChatApp.checkPasswordComplexity("Ch&&sec@ke99!"));
+        assertTrue(QuickChatApp.isStrongPassword("Ch&&sec@ke99!"));
     }
 
     @Test
     public void testPasswordFailsRequirements() {
-        assertFalse(QuickChatApp.checkPasswordComplexity("password"));
+        assertFalse(QuickChatApp.isStrongPassword("password"));
     }
 
     @Test
     public void testCellNumberCorrectFormat() {
-        assertTrue(QuickChatApp.checkCellPhoneNumber("+27838968976"));
+        assertTrue(QuickChatApp.isValidPhoneNumber("+27838968976"));
     }
 
     @Test
     public void testCellNumberIncorrectFormat() {
-        assertFalse(QuickChatApp.checkCellPhoneNumber("08966553"));
+        assertFalse(QuickChatApp.isValidPhoneNumber("08966553"));
     }
 
     @Test
     public void testSuccessfulLogin() {
-        QuickChatApp.registerUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
-        assertTrue(QuickChatApp.loginUser("kyl_1", "Ch&&sec@ke99!"));
+        QuickChatApp.registerNewUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
+        assertTrue(QuickChatApp.verifyLogin("kyl_1", "Ch&&sec@ke99!"));
     }
 
     @Test
     public void testFailedLogin() {
-        QuickChatApp.registerUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
-        assertFalse(QuickChatApp.loginUser("wrong_user", "wrong_pass"));
+        QuickChatApp.registerNewUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
+        assertFalse(QuickChatApp.verifyLogin("wrong_user", "wrong_pass"));
     }
 
     @Test
     public void testRegisterUsernameErrorMessage() {
-        String result = QuickChatApp.registerUser("kyle!!!!!!!", "Ch&&sec@ke99!", "+27838968976");
-        assertEquals("Username is incorrectly formatted, please ensure that your username contains an underscore and is no longer than five characters .", result);
+        String result = QuickChatApp.registerNewUser("kyle!!!!!!!", "Ch&&sec@ke99!", "+27838968976");
+        assertEquals("Username is incorrectly formatted, please ensure that your username contains an underscore and is no longer than five characters.", result);
     }
 
     @Test
     public void testRegisterPasswordErrorMessage() {
-        String result = QuickChatApp.registerUser("kyl_1", "password", "+27838968976");
+        String result = QuickChatApp.registerNewUser("kyl_1", "password", "+27838968976");
         assertEquals("Password is incorrectly formatted, please ensure that the password contains at least eight characters, a capital letter, a number, and a special character.", result);
     }
 
     @Test
     public void testRegisterCellErrorMessage() {
-        String result = QuickChatApp.registerUser("kyl_1", "Ch&&sec@ke99!", "08966553");
+        String result = QuickChatApp.registerNewUser("kyl_1", "Ch&&sec@ke99!", "08966553");
         assertEquals("Cellphone number incorrectly formatted or does not contain international code.", result);
     }
 
     @Test
     public void testSuccessfulRegistration() {
-        String result = QuickChatApp.registerUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
+        String result = QuickChatApp.registerNewUser("kyl_1", "Ch&&sec@ke99!", "+27838968976");
         assertEquals("User registered successfully.", result);
     }
 
     @Test
     public void testReturnLoginStatusSuccess() {
-        String message = QuickChatApp.returnLoginStatus("Kyle", "Smith", true);
+        String message = QuickChatApp.getLoginGreeting("Kyle", "Smith", true);
         assertEquals("Welcome Kyle Smith, it is great to see you again.", message);
     }
 
     @Test
     public void testReturnLoginStatusFailure() {
-        String message = QuickChatApp.returnLoginStatus("Kyle", "Smith", false);
+        String message = QuickChatApp.getLoginGreeting("Kyle", "Smith", false);
         assertEquals("Username or password incorrect, please try again.", message);
     }
 }
