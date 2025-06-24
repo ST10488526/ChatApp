@@ -9,34 +9,156 @@ package com.mycompany.quickchatapp;
  * @author lab_services_student
  */
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import javax.swing.JOptionPane;
-import java.util.ArrayList;
-import java.util.Random;
-import org.json.JSONObject;
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.io.*;
+import org.json.JSONObject;
 
 public class QuickChatApp {
-    // User account info
+    // These store the current user’s details
     private static String currentUser;
     private static String currentPass;
     private static String userPhone;
-    
-    // Message tracking
-    private static ArrayList<Message> messageHistory = new ArrayList<>();
-    private static int messagesSentCount = 0;
 
-    // Check if username meets requirements
+    // This keeps track of all messages that were sent
+    private static List<Message> messageHistory = new ArrayList<>();
+
+    public static void main(String[] args) {
+        
+        handleUserRegistration();
+        handleUserLogin();
+
+        JOptionPane.showMessageDialog(null, "Welcome to QuickChat!");
+
+        int messageLimit = getMessageLimit();
+
+        // Loop lets user send multiple messages (based on the limit they chose)
+        for (int i = 0; i < messageLimit; i++) {
+            int choice = showMainMenu();
+
+            if (choice == 1) {
+                handleNewMessage(i); // Send message
+            } else if (choice == 2) {
+                Message.showSavedMessages(); // Show stored messages
+                i--; // Don’t count this as a message
+            } else if (choice == 3) {
+                JOptionPane.showMessageDialog(null, "You sent " + messageHistory.size() + " message(s). Goodbye!");
+                break;
+            } else {
+                JOptionPane.showMessageDialog(null, "Invalid option. Try again.");
+                i--; // Again, don’t count invalid choices
+            }
+        }
+    }
+
+    // Just a friendly greeting when the app starts
+    private static void showWelcome() {
+        JOptionPane.showMessageDialog(null, "Welcome to QuickChat Application!");
+    }
+
+    // Gets how many messages the user wants to send
+    private static int getMessageLimit() {
+        while (true) {
+            try {
+                String input = JOptionPane.showInputDialog("How many messages would you like to send?");
+                int number = Integer.parseInt(input);
+                if (number > 0) return number;
+                JOptionPane.showMessageDialog(null, "Please enter a positive number.");
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "That wasn’t a valid number.");
+            }
+        }
+    }
+
+    // Shows the menu where the user picks what to do
+    private static int showMainMenu() {
+        String menu = """
+                Choose an option by typing a number:
+                1. Send a Message
+                2. Show Stored Messages
+                3. Quit""";
+        try {
+            return Integer.parseInt(JOptionPane.showInputDialog(menu));
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    // Keeps asking the user to register correctly until they do
+    private static void handleUserRegistration() {
+        while (true) {
+            String username = JOptionPane.showInputDialog("Register a username (must contain '_' and be max 5 characters):");
+            String password = JOptionPane.showInputDialog("Enter a strong password:\n(Min 8 chars, 1 uppercase, 1 number, 1 special character)");
+            String phone = JOptionPane.showInputDialog("Enter your phone number with international code (e.g., +27831234567):");
+
+            String result = registerNewUser(username, password, phone);
+            JOptionPane.showMessageDialog(null, result);
+            if (result.equals("User registered successfully.")) break;
+        }
+    }
+
+    // Keeps prompting for login until user enters correct credentials
+    private static void handleUserLogin() {
+        while (true) {
+            String loginUser = JOptionPane.showInputDialog("LOGIN\nEnter your username:");
+            String loginPass = JOptionPane.showInputDialog("LOGIN\nEnter your password:");
+
+            boolean success = verifyLogin(loginUser, loginPass);
+            String firstName = JOptionPane.showInputDialog("Enter your first name:");
+            String lastName = JOptionPane.showInputDialog("Enter your last name:");
+
+            String loginMessage = getLoginGreeting(firstName, lastName, success);
+            JOptionPane.showMessageDialog(null, loginMessage);
+
+            if (success) break;
+        }
+    }
+
+    // Sends a message, stores it, or discards it depending on what user chooses
+    private static void handleNewMessage(int messageNumber) {
+        String phone = JOptionPane.showInputDialog("Enter recipient's number (start with +, max 13 chars):");
+        String messageText = JOptionPane.showInputDialog("Type your message (max 250 characters):");
+
+        Message message = new Message(phone, messageText, messageNumber);
+
+        if (!message.checkRecipientCell()) {
+            JOptionPane.showMessageDialog(null, "Invalid number. Must start with '+' and be up to 13 characters.");
+            return;
+        }
+
+        if (!message.checkMessageLength()) {
+            JOptionPane.showMessageDialog(null, "Message too long! Max 250 characters.");
+            return;
+        }
+
+        String[] options = {"Send Now", "Store for Later", "Discard"};
+        int action = JOptionPane.showOptionDialog(null,
+                "Choose what to do with the message:",
+                "Message Options",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        switch (action) {
+            case 0 -> {
+                messageHistory.add(message);
+                JOptionPane.showMessageDialog(null, message.printMessageDetails());
+            }
+            case 1 -> message.storeMessageToJson();
+            default -> JOptionPane.showMessageDialog(null, "Message discarded.");
+        }
+    }
+
+    // Checks if the username is valid
     public static boolean isValidUsername(String username) {
         return username != null && username.contains("_") && username.length() <= 5;
     }
 
-    //Password complexity
+    // Checks if password meets all complexity rules
     public static boolean isStrongPassword(String password) {
         boolean hasUpper = !password.equals(password.toLowerCase());
         boolean hasNumber = password.matches(".*\\d.*");
@@ -44,12 +166,12 @@ public class QuickChatApp {
         return password.length() >= 8 && hasUpper && hasNumber && hasSpecial;
     }
 
-    // Validate phone number format
+    // Validates international phone number
     public static boolean isValidPhoneNumber(String phone) {
         return phone != null && phone.startsWith("+") && phone.length() <= 13;
     }
 
-    // Handle user registration
+    // Handles new user registration
     public static String registerNewUser(String username, String password, String phone) {
         if (!isValidUsername(username)) {
             return "Username is incorrectly formatted, please ensure that your username contains an underscore and is no longer than five characters.";
@@ -64,239 +186,124 @@ public class QuickChatApp {
         currentUser = username;
         currentPass = password;
         userPhone = phone;
-
         return "User registered successfully.";
     }
 
-    // Verify login
+    // Verifies login credentials
     public static boolean verifyLogin(String username, String password) {
-        return username != null && password != null && 
-               username.equals(currentUser) && 
+        return username != null && password != null &&
+               username.equals(currentUser) &&
                password.equals(currentPass);
     }
 
-    // Generate login greeting
-    public static String getLoginGreeting(String firstName, String lastName, boolean loginSuccess) {
-        if (loginSuccess) {
-            return "Welcome " + firstName + " " + lastName + ", it is great to see you again.";
-        }
-        return "Username or password incorrect, please try again.";
-    }
-
-    // Main application flow
-    public static void main(String[] args) {
-        // Account setup
-        String username = JOptionPane.showInputDialog("Enter a username:\n (must contain '_' and have 5 or less characters)");
-        String password = JOptionPane.showInputDialog("Enter a password:\n(Min 8 characters, 1 uppercase, 1 number, 1 special character)");
-        String phone = JOptionPane.showInputDialog("Enter your SA cell number (with international code, e.g., +27831234567):");
-
-        String registrationResult = registerNewUser(username, password, phone);
-        JOptionPane.showMessageDialog(null, registrationResult);
-
-        if (!registrationResult.equals("User registered successfully.")) {
-            return;
-        }
-
-        // Login process
-        String loginUsername = JOptionPane.showInputDialog("LOGIN \n Enter your username:");
-        String loginPassword = JOptionPane.showInputDialog("LOGIN \n Enter your password:");
-        boolean loggedIn = verifyLogin(loginUsername, loginPassword);
-
-        String firstName = JOptionPane.showInputDialog("Enter your first name:");
-        String lastName = JOptionPane.showInputDialog("Enter your last name:");
-        JOptionPane.showMessageDialog(null, getLoginGreeting(firstName, lastName, loggedIn));
-
-        if (!loggedIn) {
-            return;
-        }
-
-        // Start chatapp
-        JOptionPane.showMessageDialog(null, "Welcome to Quickchat!");
-        
-        int messageLimit;
-        try {
-            messageLimit = Integer.parseInt(JOptionPane.showInputDialog("How many messages would you like to send?"));
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(null, "Please enter a valid number");
-            return;
-        }
-
-        while (true) {
-            String[] menuOptions = {"Send Message", "Show Recently Sent Messages", "Quit"};
-            int selectedOption = JOptionPane.showOptionDialog(null,
-                    "Choose an option:",
-                    "Quickchat Menu",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE,
-                    null,
-                    menuOptions,
-                    menuOptions[0]);
-
-            if (selectedOption == 0 && messagesSentCount < messageLimit) {
-                handleNewMessage();
-            } 
-            else if (selectedOption == 1) {
-    new Message("", "", 0).showSavedMessages(); 
-            } 
-            else {
-                JOptionPane.showMessageDialog(null, "You sent " + messagesSentCount + " message(s). Goodbye!");
-                break;
-            }
-        }
-    }
-
-    // Handle sending a new message
-    private static void handleNewMessage() {
-        String phoneNumber = JOptionPane.showInputDialog("Enter recipient's cell number (start with +, max 13 characters):");
-        String messageContent = JOptionPane.showInputDialog("Enter your message (max 250 characters):");
-
-        Message newMessage = new Message(phoneNumber, messageContent, messagesSentCount);
-
-        if (!newMessage.checkRecipientCell()) {
-            JOptionPane.showMessageDialog(null, "Invalid recipient number. Must start with + and be 13 characters.");
-            return;
-        }
-
-        if (!newMessage.checkMessageLength()) {
-            JOptionPane.showMessageDialog(null, "Please enter a message of less than 250 characters.");
-            return;
-        }
-
-        String[] messageOptions = {"Send", "Store for Later", "Discard"};
-        int selectedAction = JOptionPane.showOptionDialog(null,
-                "Choose what to do with the message:",
-                "Message Action",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                messageOptions,
-                messageOptions[0]);
-
-        if (selectedAction == 0) {
-            messageHistory.add(newMessage);
-            messagesSentCount++;
-            JOptionPane.showMessageDialog(null, newMessage.printMessageDetails());
-        } 
-        else if (selectedAction == 1) {
-            newMessage.storeMessageToJson();
-        }
+    // Gives a welcome message after logging in
+    public static String getLoginGreeting(String firstName, String lastName, boolean success) {
+        return success ?
+               "Welcome " + firstName + " " + lastName + ", it is great to see you again." :
+               "Username or password incorrect, please try again.";
     }
 }
 
 
- // Handles the creating, storing, and showing of messages
+// ===============================
+// MESSAGE CLASS STARTS HERE
+// ===============================
+
 class Message {
-    private String id;          
-    private String to;         
-    private String content;     
-    private String hash;        
-    private int msgNum;         
+    private String id;
+    private String to;
+    private String content;
+    private String hash;
+    private int msgNum;
 
     public Message(String to, String content, int msgNum) {
         this.to = to;
         this.content = content;
         this.msgNum = msgNum;
-        this.id = makeRandomId();  
-        this.hash = makeHash();     
+        this.id = generateRandomId();
+        this.hash = generateMessageHash();
     }
 
-    // Creates a random 10 digit number for message ID
-    private String makeRandomId() {
-        Random r = new Random();
+    // This makes a 10-digit random message ID
+    private String generateRandomId() {
+        Random rand = new Random();
         StringBuilder idBuilder = new StringBuilder();
-        // Build ID digit by digit
         for (int i = 0; i < 10; i++) {
-            idBuilder.append(r.nextInt(10)); // Just add random numbers 0-9
+            idBuilder.append(rand.nextInt(10));
         }
         return idBuilder.toString();
     }
 
-    // Check if phone number looks right (starts with + and is 13 characters long)
+    // Checks if the recipient’s number is valid
     public boolean checkRecipientCell() {
         return to != null && to.startsWith("+") && to.length() <= 13;
     }
 
-    // Make sure message isn't longer 250
+    // Makes sure message isn't longer than 250 chars
     public boolean checkMessageLength() {
         return content != null && content.length() <= 250;
     }
 
-    // Creates a unique fingerprint for the message using first/last words
-    private String makeHash() {
-        String[] words = content.trim().split("\\s+");
-        String firstWord = words.length > 0 ? words[0] : "";  // Get first word
-        String lastWord = words.length > 1 ? words[words.length-1] : firstWord; //Last word
-        
-        // Combine parts to make the hash
-        return String.format("%s:%d:%s%s", 
-            id.substring(0, 2),  // First 2 chars of ID
-            msgNum,              // Message number
-            firstWord,           // First content word
-            lastWord).toUpperCase(); // Last content word, all uppercase
+    // This makes a simple message hash based on the content
+    private String generateMessageHash() {
+        String trimmed = content.trim();
+        int spaceIndex = trimmed.indexOf(" ");
+        String firstWord = spaceIndex == -1 ? trimmed : trimmed.substring(0, spaceIndex);
+        String lastWord = trimmed.contains(" ") ? trimmed.substring(trimmed.lastIndexOf(" ") + 1) : trimmed;
+        return (id.substring(0, 2) + ":" + msgNum + ":" + firstWord + lastWord).toUpperCase();
     }
 
-    // Shows all message details in a nice format
+    // Nicely prints all details about the message
     public String printMessageDetails() {
-        return String.format(
-            "Message ID: %s%nMessage Hash: %s%nRecipient: %s%nMessage: %s",
-            id, hash, to, content
-        );
+        return "Message ID: " + id + "\n" +
+               "Message Hash: " + hash + "\n" +
+               "Recipient: " + to + "\n" +
+               "Message: " + content;
     }
 
-    
-     //Saves the message to a JSON file so we can find it later
-     
+    // Saves the message to a file (in JSON format)
     public void storeMessageToJson() {
         try {
-            // Package all the message data
-            JSONObject msgData = new JSONObject();
-            msgData.put("messageID", id);
-            msgData.put("messageHash", hash);
-            msgData.put("recipient", to);
-            msgData.put("message", content);
+            JSONObject json = new JSONObject();
+            json.put("messageID", id);
+            json.put("messageHash", hash);
+            json.put("recipient", to);
+            json.put("message", content);
 
-            // Write it to the messages file
             try (FileWriter writer = new FileWriter("messages.json", true)) {
-                writer.write(msgData + System.lineSeparator());
+                writer.write(json.toString() + System.lineSeparator());
             }
-        
-            // Let user know it worked
+
             JOptionPane.showMessageDialog(null, "Message stored successfully!");
         } catch (Exception e) {
-            // Means something went wrong
             JOptionPane.showMessageDialog(null, "Failed to store message.");
-            e.printStackTrace(); // For debugging
+            e.printStackTrace();
         }
     }
 
-    //Shows all saved messages from the file
+    // Shows messages that were saved before
     public static void showSavedMessages() {
         File file = new File("messages.json");
-        
-        // Check if we even have any messages saved
+
         if (!file.exists()) {
             JOptionPane.showMessageDialog(null, "No stored messages found.");
             return;
         }
 
-        StringBuilder display = new StringBuilder("Stored Messages:\n\n");
+        StringBuilder allMessages = new StringBuilder("Stored Messages:\n\n");
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
-            // Read each saved message
             while ((line = reader.readLine()) != null) {
-                JSONObject msg = new JSONObject(line);
-                // Format each message nicely
-                display.append("Message ID: ").append(msg.getString("messageID")).append("\n")
-                       .append("Message Hash: ").append(msg.getString("messageHash")).append("\n")
-                       .append("Recipient: ").append(msg.getString("recipient")).append("\n")
-                       .append("Message: ").append(msg.getString("message")).append("\n\n");
+                JSONObject obj = new JSONObject(line);
+                allMessages.append("Message ID: ").append(obj.getString("messageID")).append("\n")
+                           .append("Message Hash: ").append(obj.getString("messageHash")).append("\n")
+                           .append("Recipient: ").append(obj.getString("recipient")).append("\n")
+                           .append("Message: ").append(obj.getString("message")).append("\n\n");
             }
 
-            // Show everything found
-            JOptionPane.showMessageDialog(null, display.toString());
+            JOptionPane.showMessageDialog(null, allMessages.toString());
         } catch (Exception e) {
-            // When something went wrong reading the file
             JOptionPane.showMessageDialog(null, "Error reading messages.");
             e.printStackTrace();
         }
